@@ -88,21 +88,6 @@ reports:{title:'Rapor',type:'reports',fields:[['title','Rapor başlığı','text
 function openModal(type,rec=null){if(!canEdit())return toast('Düzenleme yetkiniz yok.');editing=rec?{type,id:rec.id}:null;let s=schemas[type]||schemas[type==='cases'?'case':type];if(!s)return;$('#modalTitle').textContent=rec?'Kaydı düzenle':s.title;let body='<div class="formgrid">';for(let f of s.fields){let [key,label,kind,required,opts]=f;let value=rec?.[key]??(key==='created'||key==='when'||key==='collected'?dateNow():key==='status'?'Açık':key==='priority'?'Normal':key==='certainty'?'Doğrulanmış':'');let inp='';if(kind==='select'){let options=key==='caseId'?db.cases.map(c=>[c.id,c.id+' — '+c.title]):(opts||[]).map(x=>[x,x]);inp=`<select name="${key}" ${required?'required':''}><option value="">Seçiniz...</option>${options.map(([v,l])=>`<option value="${esc(v)}" ${value===v?'selected':''}>${esc(l)}</option>`).join('')}</select>`}else if(kind==='case'){inp=`<select name="${key}"><option value="">Dosya ilişkilendirme</option>${db.cases.map(c=>`<option value="${c.id}" ${value===c.id?'selected':''}>${esc(displayCaseId(c))} — ${esc(c.title)}</option>`).join('')}</select>`}else if(kind==='checkbox'){inp=`<input type="checkbox" name="${key}" ${value?'checked':''} style="width:auto;transform:scale(1.2)">`}else if(kind==='textarea'){inp=`<textarea name="${key}" ${required?'required':''}>${esc(value)}</textarea>`}else{inp=`<input name="${key}" type="${kind}" value="${esc(value)}" ${required?'required':''}>`}body+=`<div class="field ${kind==='textarea'?'full':''}"><label>${label}${required?' *':''}</label>${inp}</div>`}body+='</div><div class="modalfoot"><button onclick="closeModal()">Vazgeç</button><button class="primary" onclick="saveRecord(\''+type+'\')">Kaydet</button></div>';$('#modalbody').innerHTML=body;$('#modalback').classList.add('show')}
 function closeModal(){$('#modalback').classList.remove('show');editing=null}
 async function saveRecord(type){
- if (table === 'interviews') {
-  const selectedCase = db.cases.find(c => c.id === record.caseId);
-
-  if (!selectedCase) {
-    toast('İfade kaydı için ilişkili olay dosyası seçmelisiniz.');
-    return;
-  }
-
-  record.case_number = selectedCase.case_number;
-
-  if (!record.case_number) {
-    toast('Seçilen olay dosyasının numarası bulunamadı.');
-    return;
-  }
-}
   if(!canEdit())return toast('Düzenleme yetkiniz yok.');
   const table=type==='case'?'cases':type;
   const schema=schemas[type]||schemas[table]||(table==='cases'?schemas.case:null);
