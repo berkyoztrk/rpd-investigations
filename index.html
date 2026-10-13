@@ -219,4 +219,5 @@ async function showAdmin(){if(profile?.role!=='admin')return;page='admin';$('#cr
 async function approveMember(uid,approved){if(profile?.role!=='admin')return;const role=$('#role_'+uid)?.value||'viewer';const {error}=await client.from('profiles').update({approved,role}).eq('id',uid);if(error)return toast('Hata: '+error.message);toast('Üye güncellendi.');await showAdmin()}
 connect();checkSession();
 </script>
-</body></html>
+</body>
+</html>
