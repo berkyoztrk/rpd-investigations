@@ -122,7 +122,8 @@ async function saveRecord(type){
       if(!linkedCase||!linkedCase.case_number)throw new Error('İfade için geçerli bir ilişkili olay dosyası seçmelisiniz.');
       record.case_number=linkedCase.case_number;
       if(!record.person?.trim())throw new Error('İfade veren kişinin adını giriniz.');
-      payload={id:record.id,case_number:linkedCase.case_number,person_name:record.person.trim(),data:record};
+      if(!record.statement?.trim())throw new Error('İfade metnini giriniz.');
+      payload={id:record.id,case_number:linkedCase.case_number,person_name:record.person.trim(),statement:(record.statement||'').trim(),data:record};
     }else{
       payload={id:record.id,data:record};
     }
@@ -200,7 +201,8 @@ function persistChanges(){
              const linkedCase=now.cases.find(c=>c.id===x.caseId);
              if(!linkedCase||!linkedCase.case_number)throw new Error('İfadenin ilişkili dosya numarası bulunamadı.');
              if(!x.person?.trim())throw new Error('İfade veren kişinin adını giriniz.');
-             return {id:x.id,case_number:linkedCase.case_number,person_name:x.person.trim(),data:x};
+             if(!x.statement?.trim())throw new Error('İfade metnini giriniz.');
+             return {id:x.id,case_number:linkedCase.case_number,person_name:x.person.trim(),statement:(x.statement||'').trim(),data:x};
            }
            return {id:x.id,data:x};
          });
@@ -219,5 +221,4 @@ async function showAdmin(){if(profile?.role!=='admin')return;page='admin';$('#cr
 async function approveMember(uid,approved){if(profile?.role!=='admin')return;const role=$('#role_'+uid)?.value||'viewer';const {error}=await client.from('profiles').update({approved,role}).eq('id',uid);if(error)return toast('Hata: '+error.message);toast('Üye güncellendi.');await showAdmin()}
 connect();checkSession();
 </script>
-</body>
-</html>
+</body></html>
