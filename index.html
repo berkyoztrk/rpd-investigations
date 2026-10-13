@@ -107,7 +107,19 @@ async function saveRecord(type){
   const saveButton=form.querySelector('.modalfoot .primary');
   if(saveButton){saveButton.disabled=true;saveButton.textContent='Kaydediliyor...'}
   try{
-    const payload=table==='cases'?{id:record.id,case_number:record.case_number,title:record.title,status:record.status,priority:record.priority,lead_detective:record.lead||null,location:record.location||null,summary:record.summary||null,data:record}:{id:record.id,data:record};
+    let payload;
+    if(table==='cases'){
+      payload={id:record.id,case_number:record.case_number,title:record.title,status:record.status,priority:record.priority,lead_detective:record.lead||null,location:record.location||null,summary:record.summary||null,data:record};
+    }else if(table==='evidence'){
+      const linkedCase=db.cases.find(c=>c.id===record.caseId);
+      if(!linkedCase)throw new Error('Delil için geçerli bir ilişkili dosya seçmelisiniz.');
+      const linkedNumber=displayCaseId(linkedCase);
+      if(!linkedNumber||linkedNumber===linkedCase.id)throw new Error('Seçilen olay dosyasının dosya numarası bulunamadı.');
+      record.evidence_number=old?.evidence_number||record.evidence_number||('EV-'+new Date().getFullYear()+'-'+crypto.randomUUID().slice(0,8).toUpperCase());
+      payload={id:record.id,case_number:linkedNumber,evidence_number:record.evidence_number,title:record.name,category:record.type||null,collected_by:record.collectedBy||null,collected_at:record.collected||null,location:record.location||null,description:record.description||null,chain_of_custody:record.chain||null,data:record};
+    }else{
+      payload={id:record.id,data:record};
+    }
     const {error}=await client.from(table).upsert(payload,{onConflict:'id'});
     if(error)throw error;
     const i=db[table].findIndex(x=>x.id===record.id);
@@ -165,7 +177,16 @@ function persistChanges(){
       for(const type of TYPES){
         const old=new Map(before[type].map(x=>[x.id,x]));
         const cur=new Map(now[type].map(x=>[x.id,x]));
-        const up=[...cur.values()].filter(x=>JSON.stringify(x)!==JSON.stringify(old.get(x.id))).map(x=>type==='cases'?{id:x.id,case_number:x.case_number,title:x.title,status:x.status,priority:x.priority,lead_detective:x.lead||null,location:x.location||null,summary:x.summary||null,data:x}:{id:x.id,data:x});
+        const up=[...cur.values()].filter(x=>JSON.stringify(x)!==JSON.stringify(old.get(x.id))).map(x=>{
+           if(type==='cases')return {id:x.id,case_number:x.case_number,title:x.title,status:x.status,priority:x.priority,lead_detective:x.lead||null,location:x.location||null,summary:x.summary||null,data:x};
+           if(type==='evidence'){
+             const linkedCase=now.cases.find(c=>c.id===x.caseId);
+             if(!linkedCase||!linkedCase.case_number)throw new Error('Delilin ilişkili dosya numarası bulunamadı.');
+             x.evidence_number=x.evidence_number||('EV-'+new Date().getFullYear()+'-'+x.id.slice(0,8).toUpperCase());
+             return {id:x.id,case_number:linkedCase.case_number,evidence_number:x.evidence_number,title:x.name,category:x.type||null,collected_by:x.collectedBy||null,collected_at:x.collected||null,location:x.location||null,description:x.description||null,chain_of_custody:x.chain||null,data:x};
+           }
+           return {id:x.id,data:x};
+         });
         if(up.length){const {error}=await client.from(type).upsert(up,{onConflict:'id'});if(error)throw Error(type+': '+error.message)}
         const removed=[...old.keys()].filter(id=>!cur.has(id));
         if(removed.length){const {error}=await client.from(type).delete().in('id',removed);if(error)throw Error(type+': '+error.message)}
